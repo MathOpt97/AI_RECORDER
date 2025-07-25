@@ -16,7 +16,8 @@ video_id = 0
 frame_counter = 0
 frame_of_detection = 0
 write_json = False
-AI_PERIOD = 1 # egundos de amostragem em que a IA é ativada
+nao_salvar = False
+AI_PERIOD = 1 # segundos de amostragem em que a IA é ativada
 
 
 os.makedirs(SAVE_FOLDER, exist_ok=True)
@@ -79,7 +80,7 @@ try:
                         class_name = model.names[class_id]
                         if class_name == "person" and confidence >= 0.5:
                             print(f"Pessoa detectada com confiança {confidence:.2f}")
-                            print('Desativando IA')
+                            print('Desativando IA e gravando restante de video')
                             record_extend = RECORD_SECONDS_AFTER_DETECTION
                             frame_of_detection = frame_counter
                             write_json = True
@@ -102,6 +103,10 @@ try:
                 f.write(",")
                 f.write("\n")
             print(f"Detecção salva em: {json_path}")
+        else:
+            print("Nenhuma detecção relevante encontrada.")
+            nao_salvar = True
+            video_id -= 1 # Sobreescrevendo video anterior
 
 except KeyboardInterrupt:
     print("Parado pelo usuário.")
