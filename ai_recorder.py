@@ -10,18 +10,18 @@ SAVE_FOLDER = "videos"
 SAVE_DETECTIONS_FOLDER = "detection_logs"
 RECORD_SECONDS = 30
 RECORD_SECONDS_AFTER_DETECTION = 20
-MAX_VIDEOS = 4
+MAX_VIDEOS = 10
 record_extend = 0
 video_id = 0
 frame_counter = 0
 frame_of_detection = 0
 write_json = False
+AI_PERIOD = 1 # egundos de amostragem em que a IA é ativada
 
-# Make sure folders exist
+
 os.makedirs(SAVE_FOLDER, exist_ok=True)
 os.makedirs(SAVE_DETECTIONS_FOLDER, exist_ok=True)
 
-# Initialize video stream
 cap = cv2.VideoCapture(STREAM_URL)
 
 if not cap.isOpened():
@@ -39,6 +39,7 @@ fourcc = cv2.VideoWriter_fourcc(*'mp4v')
 
 # Load YOLO model
 model = YOLO("yolo11n.pt")
+start_time_ia = time.time()
 
 try:
     while True:
@@ -60,9 +61,10 @@ try:
 
             frame_counter += 1
 
-            print(f"Frame {frame_counter}")
-
-            if not stop_ai:
+            #print(f"Frame {frame_counter}")
+                
+            if not stop_ai and (time.time() - start_time_ia >= AI_PERIOD):
+                start_time_ia = time.time()
                 # Run YOLO detection
                 results = model.predict(frame, conf=0.3, verbose=False, stream = True)
 
@@ -77,11 +79,11 @@ try:
                         class_name = model.names[class_id]
                         if class_name == "person" and confidence >= 0.5:
                             print(f"Pessoa detectada com confiança {confidence:.2f}")
+                            print('Desativando IA')
                             record_extend = RECORD_SECONDS_AFTER_DETECTION
                             frame_of_detection = frame_counter
                             write_json = True
                             stop_ai = True
-                            break
 
             out.write(frame)
 
@@ -92,12 +94,13 @@ try:
             detection_dict = {
                 "frame_of_detection": frame_of_detection,
                 "video_id": video_id,
-                "total_frames": frame_counter
+                "total_frames": frame_counter,
             }
             json_path = os.path.join(SAVE_DETECTIONS_FOLDER, f"video_{video_id}.json")
             with open(json_path, "a") as f:
                 json.dump(detection_dict, f)
-                #f.write("\n")
+                f.write(",")
+                f.write("\n")
             print(f"Detecção salva em: {json_path}")
 
 except KeyboardInterrupt:
